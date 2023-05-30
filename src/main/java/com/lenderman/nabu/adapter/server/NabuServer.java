@@ -7,6 +7,7 @@ import org.apache.log4j.Logger;
 import com.lenderman.nabu.adapter.connection.Connection;
 import com.lenderman.nabu.adapter.connection.SerialConnection;
 import com.lenderman.nabu.adapter.connection.TcpConnection;
+import com.lenderman.nabu.adapter.extensions.FileStoreExtensions;
 import com.lenderman.nabu.adapter.extensions.HeadlessExtension;
 import com.lenderman.nabu.adapter.extensions.NHACPExtension;
 import com.lenderman.nabu.adapter.extensions.ServerExtension;
@@ -84,6 +85,7 @@ public class NabuServer
         sioc = new ServerInputOutputController(connection);
 
         this.extensions = new ArrayList<ServerExtension>();
+        this.extensions.add(new FileStoreExtensions(sioc, settings));
         this.extensions.add(new HeadlessExtension(this, sioc, settings));
         this.extensions.add(new NHACPExtension(sioc, settings));
     }

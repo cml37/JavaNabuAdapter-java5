@@ -4,7 +4,7 @@ Java 5 version of https://github.com/nabunetwork/Adaptor
 WARNING: Java 5 is ancient, but so is Windows '98, which is the target OS for running this software version.  Proceed at your own risk!!
 
 # Deficiencies 
-* RetroNet File Store Extension mode is currently unimplemented (not ported from Java 8)
+* RetroNet File Store Extension mode is completely untested
 * NHACP Extension could use additional testing, especially for modes not executed by ISHKUR CP/M
 
 # Building
