@@ -1,23 +1,20 @@
 package com.lenderman.nabu.adapter.extensions;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileFilter;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.RandomAccessFile;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.apache.log4j.Logger;
 import com.lenderman.nabu.adapter.loader.WebLoader;
 import com.lenderman.nabu.adapter.model.file.FileDetails;
 import com.lenderman.nabu.adapter.model.file.FileHandle;
@@ -60,20 +57,18 @@ import com.lenderman.nabu.adapter.utilities.WebUtils;
  * https://github.com/DJSures/NABU-LIB/blob/main/NABULIB/RetroNET-FileStore.h
  * only support HTTP(s) and Local files, no FTP
  */
-public class FileStoreExtensions // implements ServerExtension
+public class FileStoreExtensions implements ServerExtension
 {
-    /*
     /**
      * Class Logger
      */
-    private static final Logger logger = LogManager
+    private static final Logger logger = Logger
             .getLogger(FileStoreExtensions.class);
 
     /**
      * Empty file handle constant
      */
-     private static final Optional<FileHandle> EMPTY_HANDLE =
-    / Optional.empty();
+    private static final FileHandle EMPTY_HANDLE = null;
 
     /**
      * Instance of the Server I/O Controller
@@ -89,7 +84,7 @@ public class FileStoreExtensions // implements ServerExtension
      * We keep track of the file handles opened by NABU with a quick /
      * dictionary
      */
-    private ConcurrentHashMap<Byte, Optional<FileHandle>> fileHandles;
+    private ConcurrentHashMap<Byte, FileHandle> fileHandles;
 
     /**
      * When fileList() is called, we create a list of the files which can then
@@ -196,7 +191,7 @@ public class FileStoreExtensions // implements ServerExtension
      */
     private void initialize()
     {
-        this.fileHandles = new ConcurrentHashMap<Byte, Optional<FileHandle>>();
+        this.fileHandles = new ConcurrentHashMap<Byte, FileHandle>();
         this.fileDetails = new ArrayList<FileDetails>();
 
         for (int b = 0; b <= ConversionUtils.MAX_BYTE_VALUE; b++)
@@ -228,15 +223,19 @@ public class FileStoreExtensions // implements ServerExtension
                 return;
             }
 
-            Path fullPathAndFilename = Paths
-                    .get(this.settings.getWorkingDirectory().get(), fileName);
-            if (!Files.exists(fullPathAndFilename))
+            File fullPathAndFilename = new File(
+                    this.settings.getWorkingDirectory() + File.separator
+                            + fileName);
+            if (!fullPathAndFilename.exists())
             {
-                Optional<byte[]> data;
+                byte[] data;
 
                 WebLoader webLoader = new WebLoader();
                 data = webLoader.tryGetData(fileName);
-                Files.write(fullPathAndFilename, data.get());
+                FileOutputStream outputStream = new FileOutputStream(
+                        fullPathAndFilename);
+                outputStream.write(data);
+                outputStream.close();
             }
         }
 
@@ -253,18 +252,24 @@ public class FileStoreExtensions // implements ServerExtension
         if (fileHandle == ConversionUtils.MAX_BYTE_VALUE || this.fileHandles
                 .get(ConversionUtils.byteVal(fileHandle)) != EMPTY_HANDLE)
         {
-            fileHandle = this.fileHandles.entrySet().stream()
-                    .filter(entry -> entry.getValue() == EMPTY_HANDLE)
-                    .findFirst().get().getKey();
+            // find the first unused file handle
+            for (Byte key : this.fileHandles.keySet())
+            {
+                if (fileHandles.get(key) == EMPTY_HANDLE)
+                {
+                    fileHandle = key;
+                    break;
+                }
+            }
         }
 
         FileHandle nabuFileHandle = new FileHandle(
-                this.settings.getWorkingDirectory().get(), fileName, fileFlags,
+                this.settings.getWorkingDirectory(), fileName, fileFlags,
                 fileHandle);
 
         // Mark this handle as in use.
         this.fileHandles.put(ConversionUtils.byteVal(fileHandle),
-                Optional.of(nabuFileHandle));
+                nabuFileHandle);
 
         // Let the NABU know what the real file handle is
         this.sioc.getOs().writeBytes(fileHandle);
@@ -279,19 +284,19 @@ public class FileStoreExtensions // implements ServerExtension
         int fileHandle = this.sioc.getIs().readByte();
 
         // Retrieve this file handle from the file handle list.
-        Optional<FileHandle> nabuFileHandle = this.fileHandles
+        FileHandle nabuFileHandle = this.fileHandles
                 .get(ConversionUtils.byteVal(fileHandle));
 
-        if (nabuFileHandle.isPresent())
+        if (nabuFileHandle != null)
         {
-            this.sioc.getOs().writeInt(
-                    this.fileSize(nabuFileHandle.get().getFullFilename()));
+            this.sioc.getOs()
+                    .writeInt(this.fileSize(nabuFileHandle.getFullFilename()));
         }
         else
         {
             logger.error(
-                    "Requested file handle {} but it was not found, returning -1",
-                    String.format("%06x", fileHandle));
+                    "Requested file handle " + String.format("%06x", fileHandle)
+                            + " but it was not found, returning -1");
             this.sioc.getOs().writeInt(-1L);
         }
     }
@@ -311,22 +316,24 @@ public class FileStoreExtensions // implements ServerExtension
         int length = this.sioc.getIs().readShort();
 
         // Retrieve this file handle from the file handle list.
-        Optional<FileHandle> nabuFileHandle = this.fileHandles
+        FileHandle nabuFileHandle = this.fileHandles
                 .get(ConversionUtils.byteVal(fileHandle));
 
-        if (nabuFileHandle.isPresent())
+        if (nabuFileHandle != null)
         {
-            byte[] data = Arrays.copyOfRange(
-                    Files.readAllBytes(nabuFileHandle.get().getFullFilename()),
-                    (int) offset, (int) offset + length);
+            RandomAccessFile seeker = new RandomAccessFile(
+                    nabuFileHandle.getFullFilename(), "r");
+            seeker.seek(offset);
+            byte[] data = new byte[length];
+            seeker.read(data);
             this.sioc.getOs().writeShort(data.length);
             this.sioc.getOs().writeBytes(data);
         }
         else
         {
-            logger.error(
-                    "Requested file handle to read: {}, but it was not found",
-                    String.format("%06x", fileHandle));
+            logger.error("Requested file handle to read: "
+                    + String.format("%06x", fileHandle)
+                    + ", but it was not found");
 
             // sending back 0, this tells the NABU there is no data to read
             sioc.getOs().writeShort(0);
@@ -354,9 +361,8 @@ public class FileStoreExtensions // implements ServerExtension
         // read filename
         String fileName = this.sioc.getIs().readString(length);
         this.sioc.getOs()
-                .writeInt(this.fileSize(
-                        Paths.get(this.settings.getWorkingDirectory().get(),
-                                sanitizeFilename(fileName))));
+                .writeInt(this.fileSize(this.settings.getWorkingDirectory()
+                        + File.separator + sanitizeFilename(fileName)));
     }
 
     /**
@@ -374,19 +380,22 @@ public class FileStoreExtensions // implements ServerExtension
         byte[] data = this.sioc.getIs().readBytes(length);
 
         // ok, get the specified file handle.
-        Optional<FileHandle> nabuFileHandle = this.fileHandles
+        FileHandle nabuFileHandle = this.fileHandles
                 .get(ConversionUtils.byteVal(fileHandle));
 
-        if (nabuFileHandle.isPresent() && nabuFileHandle.get()
-                .getFlagsAsOpenFlags().contains(OpenFlags.ReadWrite))
+        if (nabuFileHandle != null && nabuFileHandle.getFlagsAsOpenFlags()
+                .contains(OpenFlags.ReadWrite))
         {
-            Files.write(nabuFileHandle.get().getFullFilename(), data,
-                    StandardOpenOption.APPEND);
+            OutputStream os = new FileOutputStream(
+                    nabuFileHandle.getFullFilename(), true);
+            os.write(data);
+            os.close();
         }
         else
         {
-            logger.error("Requested file Append on {}, but it was not found",
-                    String.format("%06x", fileHandle));
+            logger.error("Requested file Append on "
+                    + String.format("%06x", fileHandle)
+                    + ", but it was not found");
         }
     }
 
@@ -407,30 +416,47 @@ public class FileStoreExtensions // implements ServerExtension
         // Read the data from the buffer
         byte[] data = this.sioc.getIs().readBytes(length);
 
-        List<Byte> datalist = IntStream.range(0, data.length)
-                .mapToObj(i -> data[i]).collect(Collectors.toList());
+        List<Byte> datalist = new ArrayList<Byte>();
+        for (byte b : data)
+        {
+            datalist.add(b);
+        }
 
         // Get the file handle
-        Optional<FileHandle> nabuFileHandle = this.fileHandles
+        FileHandle nabuFileHandle = this.fileHandles
                 .get(ConversionUtils.byteVal(fileHandle));
 
-        if (nabuFileHandle.isPresent() && ((nabuFileHandle.get()
-                .getFlagsAsOpenFlags().contains(OpenFlags.ReadWrite))))
+        if (nabuFileHandle != null && ((nabuFileHandle.getFlagsAsOpenFlags()
+                .contains(OpenFlags.ReadWrite))))
         {
-            byte[] bytelist = Files
-                    .readAllBytes(nabuFileHandle.get().getFullFilename());
-            List<Byte> list = IntStream.range(0, bytelist.length)
-                    .mapToObj(i -> bytelist[i]).collect(Collectors.toList());
+
+            RandomAccessFile seeker = new RandomAccessFile(
+                    nabuFileHandle.getFullFilename(), "r");
+            byte[] bytelist = new byte[(int) seeker.length()];
+            seeker.read(bytelist);
+
+            List<Byte> list = new ArrayList<Byte>();
+            for (byte b : bytelist)
+            {
+                list.add(b);
+            }
             list.addAll((int) index, datalist);
             Byte[] bytes = list.toArray(new Byte[list.size()]);
             byte[] bytes2 = new byte[bytes.length];
-            IntStream.range(0, bytes.length).forEach(x -> bytes2[x] = bytes[x]);
-            Files.write(nabuFileHandle.get().getFullFilename(), bytes2);
+            for (int i = 0; i < bytes.length; i++)
+            {
+                bytes2[i] = bytes[i];
+            }
+            FileOutputStream outputStream = new FileOutputStream(
+                    nabuFileHandle.getFullFilename());
+            outputStream.write(bytes2);
+            outputStream.close();
         }
         else
         {
-            logger.error("Requested handle insert on {}, but it was not found",
-                    String.format("%06x", fileHandle));
+            logger.error("Requested handle insert on "
+                    + String.format("%06x", fileHandle)
+                    + ", but it was not found");
         }
     }
 
@@ -449,27 +475,41 @@ public class FileStoreExtensions // implements ServerExtension
         int length = this.sioc.getIs().readShort();
 
         // Get the file handle
-        Optional<FileHandle> nabuFileHandle = this.fileHandles
+        FileHandle nabuFileHandle = this.fileHandles
                 .get(ConversionUtils.byteVal(fileHandle));
 
-        if (nabuFileHandle.isPresent() && ((nabuFileHandle.get()
-                .getFlagsAsOpenFlags().contains(OpenFlags.ReadWrite))))
+        if (nabuFileHandle != null && ((nabuFileHandle.getFlagsAsOpenFlags()
+                .contains(OpenFlags.ReadWrite))))
         {
-            byte[] bytelist = Files
-                    .readAllBytes(nabuFileHandle.get().getFullFilename());
-            List<Byte> list = IntStream.range(0, bytelist.length)
-                    .mapToObj(i -> bytelist[i]).collect(Collectors.toList());
-            ArrayList<Byte> arraylist = new ArrayList<>(list);
+            RandomAccessFile seeker = new RandomAccessFile(
+                    nabuFileHandle.getFullFilename(), "r");
+            byte[] bytelist = new byte[(int) seeker.length()];
+            seeker.read(bytelist);
+
+            List<Byte> list = new ArrayList<Byte>();
+            for (byte b : bytelist)
+            {
+                list.add(b);
+            }
+            ArrayList<Byte> arraylist = new ArrayList<Byte>(list);
             arraylist.subList((int) index, (int) index + length).clear();
             Byte[] bytes = arraylist.toArray(new Byte[arraylist.size()]);
             byte[] bytes2 = new byte[bytes.length];
-            IntStream.range(0, bytes.length).forEach(x -> bytes2[x] = bytes[x]);
-            Files.write(nabuFileHandle.get().getFullFilename(), bytes2);
+            for (int i = 0; i < bytes.length; i++)
+            {
+                bytes2[i] = bytes[i];
+            }
+
+            FileOutputStream outputStream = new FileOutputStream(
+                    nabuFileHandle.getFullFilename());
+            outputStream.write(bytes2);
+            outputStream.close();
         }
         else
         {
-            logger.error("Requested file handle {}, but it was not found",
-                    String.format("%06x", fileHandle));
+            logger.error(
+                    "Requested file handle " + String.format("%06x", fileHandle)
+                            + ", but it was not found");
         }
     }
 
@@ -491,25 +531,32 @@ public class FileStoreExtensions // implements ServerExtension
         byte[] data = this.sioc.getIs().readBytes(length);
 
         // Get the file handle
-        Optional<FileHandle> nabuFileHandle = this.fileHandles
+        FileHandle nabuFileHandle = this.fileHandles
                 .get(ConversionUtils.byteVal(fileHandle));
 
-        if (nabuFileHandle.isPresent() && nabuFileHandle.get()
-                .getFlagsAsOpenFlags().contains(OpenFlags.ReadWrite))
+        if (nabuFileHandle != null && nabuFileHandle.getFlagsAsOpenFlags()
+                .contains(OpenFlags.ReadWrite))
         {
-            byte[] bytelist = Files
-                    .readAllBytes(nabuFileHandle.get().getFullFilename());
+
+            RandomAccessFile seeker = new RandomAccessFile(
+                    nabuFileHandle.getFullFilename(), "r");
+            byte[] bytelist = new byte[(int) seeker.length()];
+            seeker.read(bytelist);
 
             for (int i = 0; i < length; i++)
             {
                 bytelist[(int) (i + index)] = data[i];
             }
-            Files.write(nabuFileHandle.get().getFullFilename(), bytelist);
+            FileOutputStream outputStream = new FileOutputStream(
+                    nabuFileHandle.getFullFilename());
+            outputStream.write(bytelist);
+            outputStream.close();
         }
         else
         {
-            logger.error("Requested file handle {}, but it was not found",
-                    String.format("%06x", fileHandle));
+            logger.error(
+                    "Requested file handle " + String.format("%06x", fileHandle)
+                            + ", but it was not found");
         }
     }
 
@@ -523,20 +570,20 @@ public class FileStoreExtensions // implements ServerExtension
 
         // read the filename
         String fileName = this.sioc.getIs().readString(length);
-        Path path = Paths.get(this.settings.getWorkingDirectory().get(),
-                sanitizeFilename(fileName));
+        File path = new File(this.settings.getWorkingDirectory()
+                + File.separator + sanitizeFilename(fileName));
 
-        if (Files.exists(path))
+        if (path.exists())
         {
-            Files.delete(path);
+            path.delete();
         }
 
         // Must be a better way to do this - Find all instances of this file in
         // the file handles and close them.
         for (int i = 0; i <= ConversionUtils.MAX_BYTE_VALUE; i++)
         {
-            if (this.fileHandles.get(ConversionUtils.byteVal(i)).isPresent()
-                    && this.fileHandles.get(ConversionUtils.byteVal(i)).get()
+            if (this.fileHandles.get(ConversionUtils.byteVal(i)) != null
+                    && this.fileHandles.get(ConversionUtils.byteVal(i))
                             .getFullFilename().toString()
                             .equalsIgnoreCase(fileName))
             {
@@ -563,15 +610,28 @@ public class FileStoreExtensions // implements ServerExtension
         List<CopyMoveFlags> flags = CopyMoveFlags
                 .parse(this.sioc.getIs().readByte());
 
-        Path source = Paths.get(this.settings.getWorkingDirectory().get(),
-                sanitizeFilename(sourceFilename));
-        Path destination = Paths.get(this.settings.getWorkingDirectory().get(),
-                sanitizeFilename(destinationFilename));
+        File source = new File(this.settings.getWorkingDirectory()
+                + File.separator + sanitizeFilename(sourceFilename));
+        File destination = new File(this.settings.getWorkingDirectory()
+                + File.separator + sanitizeFilename(destinationFilename));
 
-        if (!Files.exists(destination) || (Files.exists(destination)
-                && (flags.contains(CopyMoveFlags.YesReplace))))
+        if (!destination.exists() || (destination.exists())
+                && (flags.contains(CopyMoveFlags.YesReplace)))
         {
-            Files.copy(source, destination);
+            InputStream in = new BufferedInputStream(
+                    new FileInputStream(source));
+            OutputStream out = new BufferedOutputStream(
+                    new FileOutputStream(destination));
+
+            byte[] buffer = new byte[1024];
+            int lengthRead;
+            while ((lengthRead = in.read(buffer)) > 0)
+            {
+                out.write(buffer, 0, lengthRead);
+                out.flush();
+            }
+            in.close();
+            out.close();
         }
     }
 
@@ -592,15 +652,15 @@ public class FileStoreExtensions // implements ServerExtension
         List<CopyMoveFlags> flags = CopyMoveFlags
                 .parse(this.sioc.getIs().readByte());
 
-        Path source = Paths.get(this.settings.getWorkingDirectory().get(),
-                sanitizeFilename(sourceFilename));
-        Path destination = Paths.get(this.settings.getWorkingDirectory().get(),
-                sanitizeFilename(destinationFilename));
+        File source = new File(this.settings.getWorkingDirectory()
+                + File.separator + sanitizeFilename(sourceFilename));
+        File destination = new File(this.settings.getWorkingDirectory()
+                + File.separator + sanitizeFilename(destinationFilename));
 
-        if (!Files.exists(destination) || (Files.exists(destination)
+        if (!destination.exists() || (destination.exists()
                 && (flags.contains(CopyMoveFlags.YesReplace))))
         {
-            Files.move(source, destination);
+            source.renameTo(destination);
         }
     }
 
@@ -613,17 +673,18 @@ public class FileStoreExtensions // implements ServerExtension
         int fileHandle = this.sioc.getIs().readByte();
 
         // Get the file handle
-        Optional<FileHandle> nabuFileHandle = this.fileHandles
+        FileHandle nabuFileHandle = this.fileHandles
                 .get(ConversionUtils.byteVal(fileHandle));
 
-        if (nabuFileHandle.isPresent())
+        if (nabuFileHandle != null)
         {
-            Files.createFile(nabuFileHandle.get().getFullFilename());
+            (new File(nabuFileHandle.getFullFilename())).createNewFile();
         }
         else
         {
-            logger.error("Requested file handle {}, but it was not found",
-                    String.format("%06x", fileHandle));
+            logger.error(
+                    "Requested file handle " + String.format("%06x", fileHandle)
+                            + ", but it was not found");
         }
     }
 
@@ -658,20 +719,21 @@ public class FileStoreExtensions // implements ServerExtension
         if (includeDirectories)
         {
             FileFilter fileFilter = new WildcardFileFilter(searchPattern);
-            File dir = Paths
-                    .get(this.settings.getWorkingDirectory().get(), path)
-                    .toFile();
+            File dir = new File(this.settings.getWorkingDirectory()
+                    + File.separator + path);
             File[] files = dir.listFiles(fileFilter);
 
             for (File file : files)
             {
                 if (file.isDirectory() && includeDirectories)
                 {
-                    this.fileDetails.add(new FileDetails(file.toPath()));
+                    this.fileDetails
+                            .add(new FileDetails(file.getAbsolutePath()));
                 }
                 if (!file.isDirectory() && includeFiles)
                 {
-                    this.fileDetails.add(new FileDetails(file.toPath()));
+                    this.fileDetails
+                            .add(new FileDetails(file.getAbsolutePath()));
                 }
             }
         }
@@ -697,9 +759,8 @@ public class FileStoreExtensions // implements ServerExtension
         // read in the filename
         int length = sioc.getIs().readByte();
         String filename = sioc.getIs().readString(length);
-        Path file = Paths.get(this.settings.getWorkingDirectory().get(),
-                sanitizeFilename(filename));
-        this.fileDetails(file);
+        this.fileDetails(this.settings.getWorkingDirectory() + File.separator
+                + sanitizeFilename(filename));
     }
 
     /**
@@ -711,19 +772,19 @@ public class FileStoreExtensions // implements ServerExtension
         int fileHandle = this.sioc.getIs().readByte();
 
         // Retrieve this file handle from the file handle list.
-        Optional<FileHandle> nabuFileHandle = this.fileHandles
+        FileHandle nabuFileHandle = this.fileHandles
                 .get(ConversionUtils.byteVal(fileHandle));
 
         // if the file handle is present, what the heck?
-        if (nabuFileHandle.isPresent())
+        if (nabuFileHandle != null)
         {
-            this.fileDetails(nabuFileHandle.get().getFullFilename());
+            this.fileDetails(nabuFileHandle.getFullFilename());
         }
         else
         {
-            logger.error(
-                    "Requested file handle for FileHandleDetails: {}, but it was not found",
-                    String.format("%06x", fileHandle));
+            logger.error("Requested file handle for FileHandleDetails: "
+                    + String.format("%06x", fileHandle)
+                    + ", but it was not found");
         }
     }
 
@@ -732,11 +793,12 @@ public class FileStoreExtensions // implements ServerExtension
      *
      * @param filePath
      */
-    private void fileDetails(Path filePath) throws Exception
+    private void fileDetails(String filePath) throws Exception
     {
         FileDetails fileDetails;
 
-        if (Files.exists(filePath))
+        File file = new File(filePath);
+        if (file.exists())
         {
             fileDetails = new FileDetails(filePath);
         }
@@ -762,18 +824,17 @@ public class FileStoreExtensions // implements ServerExtension
         int length = this.sioc.getIs().readShort();
 
         // Retrieve this file handle from the file handle list.
-        Optional<FileHandle> nabuFileHandle = this.fileHandles
+        FileHandle nabuFileHandle = this.fileHandles
                 .get(ConversionUtils.byteVal(fileHandle));
 
         // if the file handle is present, what the heck?
-        if (nabuFileHandle.isPresent())
+        if (nabuFileHandle != null)
         {
             RandomAccessFile file = new RandomAccessFile(
-                    nabuFileHandle.get().getFullFilename().toFile(), "r");
+                    nabuFileHandle.getFullFilename(), "r");
             byte[] data = new byte[length];
-            file.read(data, (int) nabuFileHandle.get().getIndex(), length);
-            nabuFileHandle.get()
-                    .setIndex(nabuFileHandle.get().getIndex() + length);
+            file.read(data, (int) nabuFileHandle.getIndex(), length);
+            nabuFileHandle.setIndex(nabuFileHandle.getIndex() + length);
 
             // write how much data we got
             this.sioc.getOs().writeShort(data.length);
@@ -783,9 +844,9 @@ public class FileStoreExtensions // implements ServerExtension
         }
         else
         {
-            logger.error(
-                    "Requested file handle for FileHandleReadSeq: {}, but it was not found",
-                    String.format("%06x", fileHandle));
+            logger.error("Requested file handle for FileHandleReadSeq: "
+                    + String.format("%06x", fileHandle)
+                    + ", but it was not found");
         }
     }
 
@@ -805,46 +866,46 @@ public class FileStoreExtensions // implements ServerExtension
         List<SeekFlagsRetroNet> seekFlags = SeekFlagsRetroNet.parse(seekOption);
 
         // Retrieve this file handle from the file handle list.
-        Optional<FileHandle> nabuFileHandle = this.fileHandles
+        FileHandle nabuFileHandle = this.fileHandles
                 .get(ConversionUtils.byteVal(fileHandle));
 
-        if (nabuFileHandle.isPresent())
+        if (nabuFileHandle != null)
         {
-            long fileSize = Files.size(nabuFileHandle.get().getFullFilename());
+            long fileSize = (new File(nabuFileHandle.getFullFilename()))
+                    .length();
 
             if (seekFlags.contains(SeekFlagsRetroNet.SET))
             {
                 // Seek from the start of the file
-                nabuFileHandle.get().setIndex(offset);
+                nabuFileHandle.setIndex(offset);
             }
             else if (seekFlags.contains(SeekFlagsRetroNet.CUR))
             {
                 // Seek from the current position in the file.
-                nabuFileHandle.get()
-                        .setIndex(nabuFileHandle.get().getIndex() + offset);
+                nabuFileHandle.setIndex(nabuFileHandle.getIndex() + offset);
             }
             else
             {
                 // Last option is from the end of the file.
-                nabuFileHandle.get().setIndex(fileSize - offset);
+                nabuFileHandle.setIndex(fileSize - offset);
             }
 
-            if (nabuFileHandle.get().getIndex() < 0)
+            if (nabuFileHandle.getIndex() < 0)
             {
-                nabuFileHandle.get().setIndex(0);
+                nabuFileHandle.setIndex(0);
             }
-            else if (nabuFileHandle.get().getIndex() > fileSize)
+            else if (nabuFileHandle.getIndex() > fileSize)
             {
-                nabuFileHandle.get().setIndex(fileSize);
+                nabuFileHandle.setIndex(fileSize);
             }
 
-            sioc.getOs().writeInt(nabuFileHandle.get().getIndex());
+            sioc.getOs().writeInt(nabuFileHandle.getIndex());
         }
         else
         {
-            logger.error(
-                    "Requested file handle for FileHandleSeek: {}, but it was not found",
-                    String.format("%06x", fileHandle));
+            logger.error("Requested file handle for FileHandleSeek: "
+                    + String.format("%06x", fileHandle)
+                    + ", but it was not found");
         }
     }
 
@@ -854,15 +915,17 @@ public class FileStoreExtensions // implements ServerExtension
      * @param fileName
      * @return file size
      */
-    private long fileSize(Path fileName) throws Exception
+    private long fileSize(String fileName) throws Exception
     {
-        if (Files.exists(fileName))
+        File file = new File(fileName);
+        if (file.exists())
         {
-            return Files.size(fileName);
+            return file.length();
         }
         else
         {
-            logger.error("Unable to find filename {}, returning -1", fileName);
+            logger.error(
+                    "Unable to find filename {}, returning -1: " + fileName);
             return -1;
         }
     }
@@ -875,16 +938,19 @@ public class FileStoreExtensions // implements ServerExtension
      */
     private String sanitizeFilename(String path)
     {
-        Optional<String> extension = Optional.ofNullable(path)
-                .filter(f -> f.contains("."))
-                .map(f -> f.substring(path.lastIndexOf(".") + 1));
+        int extensionIndex = path.lastIndexOf('.');
+        String extension = null;
+        if (extensionIndex > 0)
+        {
+            extension = path.substring(extensionIndex + 1);
+        }
 
-        if (!extension.isPresent() || !Settings.allowedExtensions
-                .contains(extension.get().toLowerCase()))
+        if (extension == null || !Settings.allowedExtensions
+                .contains(extension.toLowerCase()))
         {
             logger.error(
-                    "NABU requested a file extension which is not allowed: {}",
-                    path);
+                    "NABU requested a file extension which is not allowed: "
+                            + path);
         }
 
         return path;
