@@ -8,8 +8,8 @@ import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.log4j.Logger;
 import com.lenderman.nabu.adapter.loader.WebLoader;
@@ -103,7 +103,7 @@ public class NHACPExtension implements ServerExtension
     /**
      * Collection of active NHACP sessions
      */
-    private HashMap<Integer, NHACPSession> sessions;
+    private ConcurrentHashMap<Integer, NHACPSession> sessions;
 
     /**
      * Constructor
@@ -232,9 +232,9 @@ public class NHACPExtension implements ServerExtension
         {
             Integer found = null;
             // find the first unused session ID
-            for (Integer key : this.sessions.keySet())
+            for (int key = 0; key <= ConversionUtils.MAX_BYTE_VALUE; key++)
             {
-                if (sessions.get(key) == null)
+                if (!sessions.containsKey(key))
                 {
                     found = key;
                     break;
@@ -328,9 +328,9 @@ public class NHACPExtension implements ServerExtension
         {
             // find the first unused session ID
             Integer found = null;
-            for (Integer key : this.sessions.keySet())
+            for (int key = 0; key <= ConversionUtils.MAX_BYTE_VALUE; key++)
             {
-                if (sessions.get(key) == null)
+                if (!sessions.containsKey(key))
                 {
                     found = key;
                     break;
@@ -493,7 +493,7 @@ public class NHACPExtension implements ServerExtension
             FileOutputStream outputStream = new FileOutputStream(
                     new File(FileHandle.getFullFilename()));
             outputStream.write(bytes2);
-			outputStream.close();
+            outputStream.close();
 
             outgoingFrame.writeBytes(0x81);
             this.writeFrame(session.getSettings().isCrc(),
@@ -1318,7 +1318,7 @@ public class NHACPExtension implements ServerExtension
         }
         else if (this.sessions.containsKey(frame.getSessionId()))
         {
-            this.sessions.put(frame.getSessionId(), null);
+            this.sessions.remove(frame.getSessionId());
         }
     }
 
@@ -1329,12 +1329,7 @@ public class NHACPExtension implements ServerExtension
      */
     private void initialize()
     {
-        this.sessions = new HashMap<Integer, NHACPSession>();
-
-        for (int b = 0; b <= ConversionUtils.MAX_BYTE_VALUE; b++)
-        {
-            this.sessions.put(b, null);
-        }
+        this.sessions = new ConcurrentHashMap<Integer, NHACPSession>();
     }
 
     /**

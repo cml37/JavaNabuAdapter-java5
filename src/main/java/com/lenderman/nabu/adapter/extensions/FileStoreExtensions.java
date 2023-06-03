@@ -66,11 +66,6 @@ public class FileStoreExtensions implements ServerExtension
             .getLogger(FileStoreExtensions.class);
 
     /**
-     * Empty file handle constant
-     */
-    private static final FileHandle EMPTY_HANDLE = null;
-
-    /**
      * Instance of the Server I/O Controller
      */
     private ServerInputOutputController sioc;
@@ -193,11 +188,6 @@ public class FileStoreExtensions implements ServerExtension
     {
         this.fileHandles = new ConcurrentHashMap<Byte, FileHandle>();
         this.fileDetails = new ArrayList<FileDetails>();
-
-        for (int b = 0; b <= ConversionUtils.MAX_BYTE_VALUE; b++)
-        {
-            fileHandles.put(ConversionUtils.byteVal(b), EMPTY_HANDLE);
-        }
     }
 
     /**
@@ -250,12 +240,12 @@ public class FileStoreExtensions implements ServerExtension
         // If this handle is the max value, or that this handle is already in
         // use, find the first unused handle
         if (fileHandle == ConversionUtils.MAX_BYTE_VALUE || this.fileHandles
-                .get(ConversionUtils.byteVal(fileHandle)) != EMPTY_HANDLE)
+                .get(ConversionUtils.byteVal(fileHandle)) != null)
         {
             // find the first unused file handle
-            for (Byte key : this.fileHandles.keySet())
+            for (int key = 0; key <= ConversionUtils.MAX_BYTE_VALUE; key++)
             {
-                if (fileHandles.get(key) == EMPTY_HANDLE)
+                if (!fileHandles.containsKey(ConversionUtils.byteVal(key)))
                 {
                     fileHandle = key;
                     break;
@@ -347,7 +337,7 @@ public class FileStoreExtensions implements ServerExtension
     {
         // first byte, the file handle
         int fileHandle = this.sioc.getIs().readByte();
-        this.fileHandles.put(ConversionUtils.byteVal(fileHandle), EMPTY_HANDLE);
+        this.fileHandles.remove(ConversionUtils.byteVal(fileHandle));
     }
 
     /**
@@ -588,7 +578,7 @@ public class FileStoreExtensions implements ServerExtension
                             .equalsIgnoreCase(fileName))
             {
                 // clear out this file handle
-                this.fileHandles.put(ConversionUtils.byteVal(i), EMPTY_HANDLE);
+                this.fileHandles.remove(ConversionUtils.byteVal(i));
             }
         }
     }
