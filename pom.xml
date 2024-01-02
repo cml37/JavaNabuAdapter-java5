@@ -88,7 +88,7 @@
 							<goal>wget</goal>
 						</goals>
 						<configuration>
-							<url>https://www.nabunetwork.com/cpm/CPM22.SYS</url>
+							<url>https://nabu.lenderman.com/cpm/CPM22.SYS</url>
 							<outputDirectory>${project.basedir}/cpm</outputDirectory>
 						</configuration>
 					</execution>
@@ -99,7 +99,7 @@
 							<goal>wget</goal>
 						</goals>
 						<configuration>
-							<url>https://www.nabunetwork.com/cpm/FONT.GRB</url>
+							<url>https://nabu.lenderman.com/cpm/FONT.GRB</url>
 							<outputDirectory>${project.basedir}/cpm</outputDirectory>
 						</configuration>
 					</execution>
@@ -110,7 +110,7 @@
 							<goal>wget</goal>
 						</goals>
 						<configuration>
-							<url>https://www.nabunetwork.com/cpm/NDSK_A.IMG</url>
+							<url>https://nabu.lenderman.com/cpm/NDSK_A.IMG</url>
 							<outputDirectory>${project.basedir}/cpm</outputDirectory>
 						</configuration>
 					</execution>
@@ -121,7 +121,7 @@
 							<goal>wget</goal>
 						</goals>
 						<configuration>
-							<url>https://www.nabunetwork.com/cpm/NDSK_B.IMG</url>
+							<url>https://nabu.lenderman.com/cpm/NDSK_B.IMG</url>
 							<outputDirectory>${project.basedir}/cpm</outputDirectory>
 						</configuration>
 					</execution>
@@ -132,7 +132,7 @@
 							<goal>wget</goal>
 						</goals>
 						<configuration>
-							<url>https://www.nabunetwork.com/cpm/NDSK_BOOT.nabu</url>
+							<url>https://nabu.lenderman.com/cpm/NDSK_BOOT.nabu</url>
 							<outputDirectory>${project.basedir}/cpm</outputDirectory>
 						</configuration>
 					</execution>
