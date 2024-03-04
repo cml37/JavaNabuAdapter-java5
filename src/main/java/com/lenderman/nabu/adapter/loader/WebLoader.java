@@ -55,7 +55,7 @@ public class WebLoader implements Loader
 
         if (preserveDataPath != null)
         {
-            logger.debug("Preserving" + path);
+            logger.debug("Preserving " + path);
             File file = new File(preserveDataPath + getPathSeparator()
                     + new URI(path).getPath());
             file.getParentFile().mkdirs();
