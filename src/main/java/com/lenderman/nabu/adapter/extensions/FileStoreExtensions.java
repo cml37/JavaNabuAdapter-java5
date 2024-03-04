@@ -76,8 +76,7 @@ public class FileStoreExtensions implements ServerExtension
     private Settings settings;
 
     /**
-     * We keep track of the file handles opened by NABU with a quick /
-     * dictionary
+     * We keep track of the file handles opened by NABU with a quick dictionary
      */
     private ConcurrentHashMap<Byte, FileHandle> fileHandles;
 
@@ -99,9 +98,9 @@ public class FileStoreExtensions implements ServerExtension
     }
 
     /**
-     * This extension implements several new op codes - This function maps /
-     * those codes to the appropriate function call.
-     *
+     * This extension implements several new op codes - This function maps those
+     * codes to the appropriate function call.
+     * 
      * @param opCode OP code to process
      * @return true if we acted on this opCode, otherwise false.</returns>
      */
@@ -221,7 +220,7 @@ public class FileStoreExtensions implements ServerExtension
                 byte[] data;
 
                 WebLoader webLoader = new WebLoader();
-                data = webLoader.tryGetData(fileName);
+                data = webLoader.tryGetData(fileName, this.settings.getPreservedPath());
                 FileOutputStream outputStream = new FileOutputStream(
                         fullPathAndFilename);
                 outputStream.write(data);

@@ -290,7 +290,8 @@ public class NabuServer
                 if (this.settings.getPath().toLowerCase().endsWith(".nabu")
                         && segmentNumber == 1)
                 {
-                    data = loader.tryGetData(this.settings.getPath());
+                    data = loader.tryGetData(this.settings.getPath(),
+                            this.settings.getPreservedPath());
                     if (data.length > 0)
                     {
                         logger.debug("Loading NABU segment "
@@ -303,7 +304,8 @@ public class NabuServer
                 else if (this.settings.getPath().toLowerCase().endsWith(".pak")
                         && segmentNumber == 1)
                 {
-                    data = loader.tryGetData(this.settings.getPath());
+                    data = loader.tryGetData(this.settings.getPath(),
+                            this.settings.getPreservedPath());
                     if (data.length > 0)
                     {
                         logger.debug("Creating NABU segment "
@@ -323,7 +325,8 @@ public class NabuServer
                         String segmentFullPath = directory
                                 + loader.getPathSeparator() + segmentName
                                 + ".nabu";
-                        data = loader.tryGetData(segmentFullPath);
+                        data = loader.tryGetData(segmentFullPath,
+                                this.settings.getPreservedPath());
                         if (data.length > 0)
                         {
                             logger.debug("Creating NABU segment "
@@ -355,7 +358,8 @@ public class NabuServer
                                 "Could not load requested headless target, reloading menu");
 
                         loader = new LocalLoader();
-                        data = loader.tryGetData(Settings.HeadlessBootLoader);
+                        data = loader.tryGetData(Settings.HeadlessBootLoader,
+                                this.settings.getPreservedPath());
                         if (data.length > 0)
                         {
                             segment = SegmentManager

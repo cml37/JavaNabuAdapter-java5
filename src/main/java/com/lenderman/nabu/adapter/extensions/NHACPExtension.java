@@ -69,7 +69,6 @@ public class NHACPExtension implements ServerExtension
     /**
      * Formatters for writing out dates
      */
-
     private static SimpleDateFormat dateFormatter = new SimpleDateFormat(
             "yyyyMMdd");
     private static SimpleDateFormat timeFormatter = new SimpleDateFormat(
@@ -315,7 +314,8 @@ public class NHACPExtension implements ServerExtension
             if (!fullPathAndFilename.exists())
             {
                 WebLoader webLoader = new WebLoader();
-                byte[] data = webLoader.tryGetData(fileName);
+                byte[] data = webLoader.tryGetData(fileName,
+                        this.settings.getPreservedPath());
                 FileOutputStream outputStream = new FileOutputStream(
                         fullPathAndFilename);
                 outputStream.write(data);

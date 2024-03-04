@@ -51,7 +51,7 @@ public class Settings
     /**
      * NABU Network headless online config file
      */
-    private static String NabuNetworkHeadlessOnlineConfigFile = "https://www.nabunetwork.com/"
+    private static String NabuNetworkHeadlessOnlineConfigFile = "https://thenabunetwork.com/"
             + NabuNetworkHeadlessConfigFile;
     /**
      * Name of Headless bootloader program
@@ -90,11 +90,10 @@ public class Settings
         allowedExtensions.add("img");
 
         allowedUri.add("cloud.nabu.ca");
-        allowedUri.add("www.nabunetwork.com");
+        allowedUri.add("thenabunetwork.com");
         allowedUri.add("www.nabu.ca");
-        allowedUri.add("www.retrotechchris.com");
 
-        topLevelHeadlessMenu.add("NabuNetwork.com");
+        topLevelHeadlessMenu.add("TheNabuNetwork.com");
         topLevelHeadlessMenu.add("Homebrew Software");
         topLevelHeadlessMenu.add("Game Room");
         topLevelHeadlessMenu.add("Local Path");
@@ -121,7 +120,7 @@ public class Settings
      */
     private enum ParseState
     {
-        start, port, mode, path
+        start, port, mode, path, preservepath
     }
 
     /**
@@ -148,6 +147,11 @@ public class Settings
      * The path to use for cached nabu files
      */
     private String path;
+
+    /**
+     * The path to use for preseving nabu files
+     */
+    private String presevedPath = null;
 
     /**
      * The TCP/IP port used by the NABU
@@ -249,6 +253,14 @@ public class Settings
     }
 
     /**
+     * @return String
+     */
+    public String getPreservedPath()
+    {
+        return presevedPath;
+    }
+
+    /**
      * @param String path
      */
     public void setPath(String path)
@@ -344,6 +356,7 @@ public class Settings
                     {
                         this.path = argument;
                     }
+                    parseState = ParseState.start;
                     break;
 
                 case start:
@@ -355,8 +368,16 @@ public class Settings
                         this.askForChannel = true;
                     else if (argument.toLowerCase().equals("-path"))
                         parseState = ParseState.path;
+                    else if (argument.toLowerCase().equals("-preservepath"))
+                        parseState = ParseState.preservepath;
                     else
                         this.DisplayHelp();
+                    break;
+                case preservepath:
+                    this.presevedPath = argument;
+                    parseState = ParseState.start;
+                    break;
+                default:
                     break;
                 }
             }
@@ -380,7 +401,7 @@ public class Settings
         System.out.println("NABU console server usage");
         System.out.println("");
         System.out.println("Parameters:");
-        System.out.println("-mode -port -askforchannel -path");
+        System.out.println("-mode -port -askforchannel -path -preservepath");
         System.out.println();
         System.out.println(
                 "mode options: Serial, TCPIP - listen to serial port or TCPIP port");
@@ -396,13 +417,17 @@ public class Settings
                 "       url to cloud location, example https://www.mydomain.com/paklocation");
         System.out.println("       headless, to run in headless mode");
         System.out.println();
+        System.out.println(
+                "preservepath: (for web mode only) output location to save off data files as they are accessed");
+        System.out.println();
+        System.out.println();
         System.out.println("Serial Mode example:");
         System.out.println(
                 "NabuAdaptor.exe -Mode Serial -Port COM4 -path headless");
         System.out.println("");
         System.out.println("TCPIP Mode example:");
         System.out.println(
-                "NabuAdaptor.exe -Mode TCPIP -Port 5816 -path https://www.nabunetwork.com/cycle2022");
+                "NabuAdaptor.exe -Mode TCPIP -Port 5816 -path https://thenabunetwork.com/cycle2022");
         System.exit(0);
     }
 }
