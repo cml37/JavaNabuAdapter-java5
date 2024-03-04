@@ -24,16 +24,25 @@ package com.lenderman.nabu.adapter.loader;
  */
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.net.URI;
 import java.net.URLConnection;
+import org.apache.log4j.Logger;
 import com.lenderman.nabu.adapter.utilities.WebUtils;
 
 public class WebLoader implements Loader
 {
     /**
+     * Class Logger
+     */
+    private static final Logger logger = Logger.getLogger(WebLoader.class);
+
+    /**
      * {@inheritDoc}
      */
-    public byte[] tryGetData(String path) throws Exception
+    public byte[] tryGetData(String path, String preserveDataPath)
+            throws Exception
     {
         URLConnection connection = WebUtils.openWebClient(path);
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -42,6 +51,24 @@ public class WebLoader implements Loader
         while ((len = connection.getInputStream().read(bytes)) > 0)
         {
             buffer.write(bytes, 0, len);
+        }
+
+        if (preserveDataPath != null)
+        {
+            logger.debug("Preserving" + path);
+            File file = new File(preserveDataPath + getPathSeparator()
+                    + new URI(path).getPath());
+            file.getParentFile().mkdirs();
+            FileOutputStream fos = new FileOutputStream(file);
+            try
+            {
+                fos.write(buffer.toByteArray());
+            }
+            catch (Exception ex)
+            {
+                logger.error("Could not write file", ex);
+            }
+            fos.close();
         }
         buffer.close();
         return (buffer.toByteArray());

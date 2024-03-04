@@ -41,7 +41,7 @@ public class LocalLoader implements Loader
     /**
      * {@inheritDoc}
      */
-    public byte[] tryGetData(String path) throws Exception
+    public byte[] tryGetData(String path, String preserveDataPath) throws Exception
     {
         if (path.equalsIgnoreCase(Settings.HeadlessBootLoader))
         {

@@ -29,9 +29,11 @@ public interface Loader
      * Try to get the data
      * 
      * @param String path
+     * @param String preserveDataPath data path for preserving data (null if no
+     *        desire to preserve data)
      * @return byte[]
      */
-    public byte[] tryGetData(String path) throws Exception;
+    public byte[] tryGetData(String path, String preserveDataPath) throws Exception;
 
     /**
      * Try to get the containing directory of the specified file
