@@ -7,10 +7,10 @@ import java.security.Security;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
-import com.lenderman.nabu.adapter.loader.LocalLoader;
 import com.lenderman.nabu.adapter.model.settings.Settings;
 
 /*
@@ -40,7 +40,7 @@ public class WebUtils
     /**
      * Class Logger
      */
-    private static final Logger logger = Logger.getLogger(LocalLoader.class);
+    private static final Logger logger = Logger.getLogger(WebUtils.class);
 
     // Bring in BouncyCastle and disable hostname verification for known URLs
     static
@@ -112,8 +112,10 @@ public class WebUtils
         SSLContext clientContext;
         try
         {
+            TrustManager[] trustArray = new TrustManager[1];
+            trustArray[0] = new TrustAllTrustManager();
             clientContext = SSLContext.getInstance("TLS");
-            clientContext.init(null, null, new SecureRandom());
+            clientContext.init(null, trustArray, new SecureRandom());
             return clientContext.getSocketFactory();
         }
         catch (Exception e)
