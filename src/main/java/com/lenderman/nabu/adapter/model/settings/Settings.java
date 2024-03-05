@@ -91,6 +91,7 @@ public class Settings
 
         allowedUri.add("cloud.nabu.ca");
         allowedUri.add("adaptor.thenabunetwork.com");
+        allowedUri.add("withretro.com");
         allowedUri.add("www.nabu.ca");
 
         topLevelHeadlessMenu.add("TheNabuNetwork.com");
