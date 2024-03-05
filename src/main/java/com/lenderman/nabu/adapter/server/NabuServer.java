@@ -361,8 +361,8 @@ public class NabuServer
                             if (data.length > 0)
                             {
                                 logger.debug("Loading NABU segment "
-                                        + String.format("%06x", segmentNumber
-                                                + " from" + pakFullPath));
+                                        + String.format("%06x", segmentNumber)
+                                        + " from" + pakFullPath);
                                 segment = SegmentManager
                                         .loadPackets(segmentNumber, data);
                             }
