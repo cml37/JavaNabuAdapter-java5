@@ -41,29 +41,36 @@ public class LocalLoader implements Loader
     /**
      * {@inheritDoc}
      */
-    public byte[] tryGetData(String path, String preserveDataPath) throws Exception
+    public byte[] tryGetData(String path, String preserveDataPath)
     {
         if (path.equalsIgnoreCase(Settings.HeadlessBootLoader))
         {
-            InputStream stream = getClass().getClassLoader()
-                    .getResourceAsStream(Settings.HeadlessBootResource);
-            List<Byte> list = new ArrayList<Byte>();
-
-            int nRead;
-            byte[] data = new byte[4];
-
-            while ((nRead = stream.read(data, 0, data.length)) != -1)
+            try
             {
-                for (int i = 0; i < nRead; i++)
-                    list.add(data[i]);
-            }
-            byte[] bytes = new byte[list.size()];
+                InputStream stream = getClass().getClassLoader()
+                        .getResourceAsStream(Settings.HeadlessBootResource);
+                List<Byte> list = new ArrayList<Byte>();
 
-            for (int i = 0; i < list.size(); i++)
-            {
-                bytes[i] = list.get(i);
+                int nRead;
+                byte[] data = new byte[4];
+
+                while ((nRead = stream.read(data, 0, data.length)) != -1)
+                {
+                    for (int i = 0; i < nRead; i++)
+                        list.add(data[i]);
+                }
+                byte[] bytes = new byte[list.size()];
+
+                for (int i = 0; i < list.size(); i++)
+                {
+                    bytes[i] = list.get(i);
+                }
+                return bytes;
             }
-            return bytes;
+            catch (Exception ex)
+            {
+                return new byte[0];
+            }
         }
 
         try
@@ -95,7 +102,14 @@ public class LocalLoader implements Loader
     public String tryGetDirectory(String path) throws Exception
     {
         File file = new File(path);
-        return file.getParent();
+        if (file.isDirectory())
+        {
+            return path;
+        }
+        else
+        {
+            return file.getParent();
+        }
     }
 
     /**

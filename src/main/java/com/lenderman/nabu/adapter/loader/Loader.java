@@ -33,7 +33,7 @@ public interface Loader
      *        desire to preserve data)
      * @return byte[]
      */
-    public byte[] tryGetData(String path, String preserveDataPath) throws Exception;
+    public byte[] tryGetData(String path, String preserveDataPath);
 
     /**
      * Try to get the containing directory of the specified file
