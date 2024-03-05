@@ -42,36 +42,42 @@ public class WebLoader implements Loader
      * {@inheritDoc}
      */
     public byte[] tryGetData(String path, String preserveDataPath)
-            throws Exception
     {
-        URLConnection connection = WebUtils.openWebClient(path);
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        byte[] bytes = new byte[8192];
-        int len;
-        while ((len = connection.getInputStream().read(bytes)) > 0)
+        try
         {
-            buffer.write(bytes, 0, len);
-        }
+            URLConnection connection = WebUtils.openWebClient(path);
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            byte[] bytes = new byte[8192];
+            int len;
+            while ((len = connection.getInputStream().read(bytes)) > 0)
+            {
+                buffer.write(bytes, 0, len);
+            }
 
-        if (preserveDataPath != null)
-        {
-            logger.debug("Preserving " + path);
-            File file = new File(preserveDataPath + getPathSeparator()
-                    + new URI(path).getPath());
-            file.getParentFile().mkdirs();
-            FileOutputStream fos = new FileOutputStream(file);
-            try
+            if (preserveDataPath != null)
             {
-                fos.write(buffer.toByteArray());
+                logger.debug("Preserving " + path);
+                File file = new File(preserveDataPath + getPathSeparator()
+                        + new URI(path).getPath());
+                file.getParentFile().mkdirs();
+                FileOutputStream fos = new FileOutputStream(file);
+                try
+                {
+                    fos.write(buffer.toByteArray());
+                }
+                catch (Exception ex)
+                {
+                    logger.error("Could not write file", ex);
+                }
+                fos.close();
             }
-            catch (Exception ex)
-            {
-                logger.error("Could not write file", ex);
-            }
-            fos.close();
+            buffer.close();
+            return (buffer.toByteArray());
         }
-        buffer.close();
-        return (buffer.toByteArray());
+        catch (Exception ex)
+        {
+            return new byte[0];
+        }
     }
 
     /**
