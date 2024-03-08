@@ -121,7 +121,7 @@ public class Settings
      */
     private enum ParseState
     {
-        start, port, mode, path, preservepath
+        start, port, mode, baud, path, preservepath
     }
 
     /**
@@ -346,6 +346,18 @@ public class Settings
                     parseState = ParseState.start;
                     break;
 
+                case baud:
+                    switch (this.operatingMode)
+                    {
+                    case Serial:
+                        this.baudRate = argument;
+                        break;
+                    case TCPIP:
+                        break;
+                    }
+                    parseState = ParseState.start;
+                    break;
+
                 case path:
                     if (argument.equalsIgnoreCase("headless"))
                     {
@@ -365,6 +377,8 @@ public class Settings
                         parseState = ParseState.mode;
                     else if (argument.toLowerCase().equals("-port"))
                         parseState = ParseState.port;
+                    else if (argument.toLowerCase().equals("-baud"))
+                        parseState = ParseState.baud;
                     else if (argument.toLowerCase().equals("-askforchannel"))
                         this.askForChannel = true;
                     else if (argument.toLowerCase().equals("-path"))
