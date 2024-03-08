@@ -104,9 +104,13 @@ public class SerialConnection implements Connection
                     "Serial port could not be opened: " + settings.getPort());
         }
 
-        serialPort.setParams(Integer.parseInt(settings.getBaudRate()),
+        if (!serialPort.setParams(Integer.parseInt(settings.getBaudRate()),
                 SerialPort.DATABITS_8, SerialPort.STOPBITS_2,
-                SerialPort.PARITY_NONE);
+                SerialPort.PARITY_NONE))
+        {
+            throw new Exception("Serial port could not be set to baud rate: "
+                    + settings.getBaudRate());
+        }
         serialPort.setDTR(true);
         serialPort.setRTS(true);
         serialPort.setFlowControlMode(SerialPort.FLOWCONTROL_NONE);
