@@ -1,10 +1,8 @@
 package com.lenderman.nabu.adapter.utilities;
 
 import java.net.URL;
-import java.net.URLConnection;
 import java.security.SecureRandom;
 import java.security.Security;
-import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
@@ -42,39 +40,26 @@ public class WebUtils
      */
     private static final Logger logger = Logger.getLogger(WebUtils.class);
 
+    private static boolean httpsInitialized = false;
+
     // Bring in BouncyCastle and disable hostname verification for known URLs
-    static
+    public static void initializeHttps()
     {
-        Security.insertProviderAt(new BouncyCastleJsseProvider(), 1);
-        Security.insertProviderAt(new BouncyCastleProvider(), 1);
-        javax.net.ssl.HttpsURLConnection
-                .setDefaultHostnameVerifier(new javax.net.ssl.HostnameVerifier()
-                {
-
-                    public boolean verify(String hostname,
-                            javax.net.ssl.SSLSession sslSession)
+        if (!httpsInitialized)
+        {
+            Security.insertProviderAt(new BouncyCastleJsseProvider(), 1);
+            Security.insertProviderAt(new BouncyCastleProvider(), 1);
+            javax.net.ssl.HttpsURLConnection.setDefaultHostnameVerifier(
+                    new javax.net.ssl.HostnameVerifier()
                     {
-                        return Settings.allowedUri.contains(hostname);
-                    }
-                });
-    }
-
-    /**
-     * Helper method to open a Web Client
-     * 
-     * @param String url
-     * @return URLConnection
-     */
-    public static URLConnection openWebClient(String url) throws Exception
-    {
-        URL myURL = new URL(url);
-        URLConnection webClient = myURL.openConnection();
-        webClient.addRequestProperty("user-agent", "JavaNabuAdapter");
-        webClient.addRequestProperty("Content-Type",
-                "application/octet-stream");
-        webClient.addRequestProperty("Content-Transfer-Encoding", "binary");
-        ((HttpsURLConnection) webClient).setSSLSocketFactory(getFactory());
-        return webClient;
+                        public boolean verify(String hostname,
+                                javax.net.ssl.SSLSession sslSession)
+                        {
+                            return Settings.allowedUri.contains(hostname);
+                        }
+                    });
+            httpsInitialized = true;
+        }
     }
 
     /**
@@ -107,7 +92,7 @@ public class WebUtils
      * @param String URI to validate
      * @return true if allowed URL
      */
-    private static SSLSocketFactory getFactory()
+    public static SSLSocketFactory getFactory()
     {
         SSLContext clientContext;
         try

@@ -34,7 +34,7 @@ import org.apache.log4j.Logger;
 import com.lenderman.nabu.adapter.loader.Loader;
 import com.lenderman.nabu.adapter.loader.LocalLoader;
 import com.lenderman.nabu.adapter.loader.WebLoader;
-import com.lenderman.nabu.adapter.utilities.WebUtils;
+import com.lenderman.nabu.adapter.utilities.WebClientUtils;
 
 public class Settings
 {
@@ -274,7 +274,8 @@ public class Settings
         InputStream stream = null;
         try
         {
-            stream = WebUtils.openWebClient(NabuNetworkHeadlessOnlineConfigFile)
+            stream = WebClientUtils
+                    .openWebClient(NabuNetworkHeadlessOnlineConfigFile)
                     .getInputStream();
             logger.debug("Cycles loaded from web");
 

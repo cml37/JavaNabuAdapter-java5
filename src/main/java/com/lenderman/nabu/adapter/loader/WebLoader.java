@@ -29,7 +29,7 @@ import java.io.FileOutputStream;
 import java.net.URI;
 import java.net.URLConnection;
 import org.apache.log4j.Logger;
-import com.lenderman.nabu.adapter.utilities.WebUtils;
+import com.lenderman.nabu.adapter.utilities.WebClientUtils;
 
 public class WebLoader implements Loader
 {
@@ -45,7 +45,7 @@ public class WebLoader implements Loader
     {
         try
         {
-            URLConnection connection = WebUtils.openWebClient(path);
+            URLConnection connection = WebClientUtils.openWebClient(path);
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             byte[] bytes = new byte[8192];
             int len;
