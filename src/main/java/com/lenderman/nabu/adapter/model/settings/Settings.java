@@ -291,7 +291,6 @@ public class Settings
                     .openWebClient(NabuNetworkHeadlessOnlineConfigFile)
                     .getInputStream();
             logger.debug("Cycles loaded from web");
-
         }
         catch (Exception ex)
         {

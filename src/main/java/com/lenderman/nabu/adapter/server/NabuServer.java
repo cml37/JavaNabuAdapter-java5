@@ -1,11 +1,15 @@
 package com.lenderman.nabu.adapter.server;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.log4j.Logger;
 import com.lenderman.nabu.adapter.connection.Connection;
 import com.lenderman.nabu.adapter.connection.SerialConnection;
 import com.lenderman.nabu.adapter.connection.TcpConnection;
+import com.lenderman.nabu.adapter.extensions.FileStoreExtensions;
+import com.lenderman.nabu.adapter.extensions.HeadlessExtension;
+import com.lenderman.nabu.adapter.extensions.NHACPExtension;
 import com.lenderman.nabu.adapter.extensions.ServerExtension;
 import com.lenderman.nabu.adapter.loader.Loader;
 import com.lenderman.nabu.adapter.loader.LocalLoader;
