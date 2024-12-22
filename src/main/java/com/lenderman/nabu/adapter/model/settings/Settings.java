@@ -121,7 +121,7 @@ public class Settings
      */
     private enum ParseState
     {
-        start, port, mode, baud, path, preservepath
+        start, port, mode, baud, stopbits, path, preservepath
     }
 
     /**
@@ -133,6 +133,11 @@ public class Settings
      * The baud rate used by the nabu
      */
     private String baudRate = "111865";
+
+    /**
+     * The stop bits used by the nabu
+     */
+    private String stopBits = "2";
 
     /**
      * The serial port used by the nabu
@@ -235,6 +240,14 @@ public class Settings
     public String getBaudRate()
     {
         return baudRate;
+    }
+
+    /**
+     * @return stopBits
+     */
+    public String getStopBits()
+    {
+        return stopBits;
     }
 
     /**
@@ -359,6 +372,18 @@ public class Settings
                     parseState = ParseState.start;
                     break;
 
+                case stopbits:
+                    switch (this.operatingMode)
+                    {
+                    case Serial:
+                        this.stopBits = argument;
+                        break;
+                    case TCPIP:
+                        break;
+                    }
+                    parseState = ParseState.start;
+                    break;
+
                 case path:
                     if (argument.equalsIgnoreCase("headless"))
                     {
@@ -380,6 +405,8 @@ public class Settings
                         parseState = ParseState.port;
                     else if (argument.toLowerCase().equals("-baud"))
                         parseState = ParseState.baud;
+                    else if (argument.toLowerCase().equals("-stopbits"))
+                        parseState = ParseState.stopbits;
                     else if (argument.toLowerCase().equals("-askforchannel"))
                         this.askForChannel = true;
                     else if (argument.toLowerCase().equals("-path"))

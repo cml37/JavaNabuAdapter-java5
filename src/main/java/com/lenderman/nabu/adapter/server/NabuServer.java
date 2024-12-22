@@ -1,15 +1,11 @@
 package com.lenderman.nabu.adapter.server;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.log4j.Logger;
 import com.lenderman.nabu.adapter.connection.Connection;
 import com.lenderman.nabu.adapter.connection.SerialConnection;
 import com.lenderman.nabu.adapter.connection.TcpConnection;
-import com.lenderman.nabu.adapter.extensions.FileStoreExtensions;
-import com.lenderman.nabu.adapter.extensions.HeadlessExtension;
-import com.lenderman.nabu.adapter.extensions.NHACPExtension;
 import com.lenderman.nabu.adapter.extensions.ServerExtension;
 import com.lenderman.nabu.adapter.loader.Loader;
 import com.lenderman.nabu.adapter.loader.LocalLoader;
@@ -57,11 +53,25 @@ public class NabuServer
     private ServerInputOutputController sioc;
 
     /**
+     * The data loader
+     */
+    private Loader loader;
+
+    /**
      * Constructor
      */
     public NabuServer(Settings settings)
     {
         this.settings = settings;
+        // If the path starts with http, go cloud - otherwise local
+        if (settings.getPath().toLowerCase().startsWith("http"))
+        {
+            loader = new WebLoader();
+        }
+        else
+        {
+            loader = new LocalLoader();
+        }
     }
 
     /**
@@ -262,17 +272,6 @@ public class NabuServer
         }
         else
         {
-            Loader loader;
-
-            // If the path starts with http, go cloud - otherwise local
-            if (settings.getPath().toLowerCase().startsWith("http"))
-            {
-                loader = new WebLoader();
-            }
-            else
-            {
-                loader = new LocalLoader();
-            }
 
             if (cache.containsKey(segmentNumber))
             {

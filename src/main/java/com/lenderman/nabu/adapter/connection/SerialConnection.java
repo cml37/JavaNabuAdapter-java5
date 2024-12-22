@@ -105,11 +105,12 @@ public class SerialConnection implements Connection
         }
 
         if (!serialPort.setParams(Integer.parseInt(settings.getBaudRate()),
-                SerialPort.DATABITS_8, SerialPort.STOPBITS_2,
+                SerialPort.DATABITS_8, Integer.parseInt(settings.getStopBits()),
                 SerialPort.PARITY_NONE))
         {
             throw new Exception("Serial port could not be set to baud rate: "
-                    + settings.getBaudRate());
+                    + settings.getBaudRate() + " and stop bits "
+                    + settings.getStopBits());
         }
         serialPort.setDTR(true);
         serialPort.setRTS(true);
