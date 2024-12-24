@@ -134,6 +134,7 @@ public class NabuServer
             return;
         }
 
+        int lastGoodCommand = 0;
         while (true)
         {
             try
@@ -143,60 +144,13 @@ public class NabuServer
                     throw new Exception("Connection Lost");
                 }
                 int b = sioc.getIs().readByte();
-                switch (b)
+                if (!processSwitch(b))
                 {
-                case 0x85: // Channel
-                    sioc.getOs().writeBytes(0x10, 0x6);
-                    int channel = sioc.getIs().readByte()
-                            + (sioc.getIs().readByte() << 8);
-                    logger.debug("Received Channel " + channel);
-                    sioc.getOs().writeBytes(0xE4);
-                    break;
-                case 0x84: // File Transfer
-                    this.handleFileRequest();
-                    break;
-                case 0x83:
-                    sioc.getOs().writeBytes(0x10, 0x6, 0xE4);
-                    break;
-                case 0x82:
-                    this.configureChannel(this.settings.isAskForChannel());
-                    break;
-                case 0x81:
-                    sioc.getOs().writeBytes(0x10, 0x6);
-                    sioc.getIs().readByte();
-                    sioc.getIs().readByte();
-                    sioc.getOs().writeBytes(0xE4);
-                    break;
-                case 0x1E:
-                    sioc.getOs().writeBytes(0x10, 0xE1);
-                    break;
-                case 0x5:
-                    sioc.getOs().writeBytes(0xE4);
-                    break;
-                case 0xF:
-                    break;
-                case -1:
-                    // Well, we are reading garbage, socket has probably closed,
-                    // quit this loop
-                    throw new Exception("Socket disconnected");
-                default:
-                    boolean completed = false;
-
-                    for (ServerExtension extension : this.extensions)
-                    {
-                        if (extension.tryProcessCommand(b))
-                        {
-                            completed = true;
-                            break;
-                        }
-                    }
-
-                    if (!completed)
-                    {
-                        logger.error("Unknown command 0x"
-                                + String.format("%02x", b));
-                        sioc.getOs().writeBytes(0x10, 0x6);
-                    }
+                    processSwitch(lastGoodCommand);
+                }
+                else
+                {
+                    lastGoodCommand = b;
                 }
             }
             catch (Exception ex)
@@ -215,6 +169,72 @@ public class NabuServer
                 }
             }
         }
+    }
+
+    /**
+     * Process the switch statement
+     */
+    private boolean processSwitch(int b) throws Exception
+    {
+        switch (b)
+        {
+        case 0x85: // Channel
+            sioc.getOs().writeBytes(0x10, 0x6);
+            int channel = sioc.getIs().readByte()
+                    + (sioc.getIs().readByte() << 8);
+            logger.debug("Received Channel " + channel);
+            sioc.getOs().writeBytes(0xE4);
+            break;
+        case 0x84: // File Transfer
+            this.handleFileRequest();
+            break;
+        case 0x83:
+            sioc.getOs().writeBytes(0x10, 0x6, 0xE4);
+            break;
+        case 0x82:
+            this.configureChannel(this.settings.isAskForChannel());
+            break;
+        case 0x81:
+            sioc.getOs().writeBytes(0x10, 0x6);
+            sioc.getIs().readByte();
+            sioc.getIs().readByte();
+            sioc.getOs().writeBytes(0xE4);
+            break;
+        case 0x1E:
+            sioc.getOs().writeBytes(0x10, 0xE1);
+            break;
+        case 0x5:
+            sioc.getOs().writeBytes(0xE4);
+            break;
+        case 0xF:
+            break;
+        case -1:
+            // Well, we are reading garbage, socket has probably closed,
+            // quit this loop
+            throw new Exception("Socket disconnected");
+        default:
+            boolean completed = false;
+
+            for (ServerExtension extension : this.extensions)
+            {
+                if (extension.tryProcessCommand(b))
+                {
+                    completed = true;
+                    break;
+                }
+            }
+
+            if (!completed)
+            {
+                // If we get an unknown command, we'll return false here.
+				// As a result, we will try and reprocess the "last known good" command.
+				// It's a total hack, but for systems that have issues reading the
+				// input buffer, it works great!
+                logger.error("Unknown command 0x" + String.format("%02x", b));
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
